@@ -7,6 +7,7 @@ import base64
 import posixpath
 import re
 from pathlib import Path
+from time import sleep
 
 import deluge_client
 
@@ -76,16 +77,29 @@ class DelugeClient(TorrentClient):
         super().__init__()
         client_config = parse_libtc_url(url)
         self.torrents_dir = client_config.torrents_dir or ""
-        self.client = deluge_client.DelugeRPCClient(
-            host=client_config.host or "localhost",
-            port=client_config.port or 58846,
-            username=client_config.username or "",
-            password=client_config.password or "",
-            decode_utf8=True,
-            timeout=60,
-        )
-        # Connect to Deluge daemon
-        self.client.connect()
+        max_retries = 8
+        for attempt in range(max_retries):
+            try:
+                self.client = deluge_client.DelugeRPCClient(
+                    host=client_config.host or "localhost",
+                    port=client_config.port or 58846,
+                    username=client_config.username or "",
+                    password=client_config.password or "",
+                    decode_utf8=True,
+                    timeout=60
+                )
+                # Connect to Deluge daemon
+                self.client.connect()
+            except Exception as e:
+                try:
+                    self.client.disconnect()
+                except:
+                    pass
+                if attempt < max_retries - 1:
+                    logger.warning(f"Error connecting to Deluge: {e}, retrying ({attempt + 1}/{max_retries})...")
+                    sleep(2)
+                else:
+                    raise
 
         self.field_config = _DELUGE_FIELD_SPECS
 

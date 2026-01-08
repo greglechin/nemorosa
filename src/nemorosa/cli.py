@@ -1,6 +1,7 @@
 """Command line interface for nemorosa."""
 
 import asyncio
+import faulthandler
 import sys
 from argparse import ArgumentParser
 
@@ -207,6 +208,9 @@ async def async_init():
 
 def main():
     """Main function."""
+
+    faulthandler.enable()
+
     # Step 1: Setup event loop
     logger.init_logger()
     setup_event_loop()
